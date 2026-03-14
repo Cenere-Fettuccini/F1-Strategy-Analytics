@@ -1,9 +1,10 @@
+from pathlib import Path
 import fastf1
 import pandas as pd
-import os
 import json
 
-BASE_PATH = "../warehouse/bronze"
+BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_PATH = BASE_DIR / "bronze"
 
 def write_parquet(df, path):
     if df is None or df.empty:
@@ -15,36 +16,37 @@ def ingest_session(year, round_number, session_type):
     print(f"Ingesting {year} R{round_number} {session_type}")
     session = fastf1.get_session(year, round_number, session_type)
     session.load(laps=True, telemetry=True, weather=True, messages=True)
-    session_dir = os.path.join(BASE_PATH,f"{year}",f"{round_number}",f"{session_type}")
-    os.makedirs(session_dir, exist_ok=True)
+    
+    session_dir = BASE_PATH / f"{year}" / f"{round_number}" / f"{session_type}"
+    session_dir.mkdir(parents=True, exist_ok=True)
 
     # core tables
-    write_parquet(session.results, f"{session_dir}/results.parquet")
-    write_parquet(session.laps, f"{session_dir}/laps.parquet")
-    write_parquet(session.weather_data, f"{session_dir}/weather.parquet")
-    write_parquet(session.track_status, f"{session_dir}/track_status.parquet")
-    write_parquet(session.race_control_messages, f"{session_dir}/race_control.parquet")
+    write_parquet(session.results, session_dir / "results.parquet")
+    write_parquet(session.laps, session_dir / "laps.parquet")
+    write_parquet(session.weather_data, session_dir / "weather.parquet")
+    write_parquet(session.track_status, session_dir / "track_status.parquet")
+    write_parquet(session.race_control_messages, session_dir / "race_control.parquet")
 
     # telemetry folders
-    car_dir = os.path.join(session_dir, "telemetry/car_data")
-    pos_dir = os.path.join(session_dir, "telemetry/pos_data")
+    car_dir = session_dir / "telemetry" / "car_data"
+    pos_dir = session_dir / "telemetry" / "pos_data"
 
-    os.makedirs(car_dir, exist_ok=True)
-    os.makedirs(pos_dir, exist_ok=True)
+    car_dir.mkdir(parents=True, exist_ok=True)
+    pos_dir.mkdir(parents=True, exist_ok=True)
 
     if session.car_data:
         for driver, df in session.car_data.items():
-            write_parquet(df, f"{car_dir}/{driver}.parquet")
+            write_parquet(df, car_dir / f"{driver}.parquet")
 
     if session.pos_data:
         for driver, df in session.pos_data.items():
-            write_parquet(df, f"{pos_dir}/{driver}.parquet")
+            write_parquet(df, pos_dir / f"{driver}.parquet")
 
     # metadata
-    with open(f"{session_dir}/metadata_session.json", "w") as f:
+    with open(session_dir / "metadata_session.json", "w") as f:
         json.dump(dict(session.session_info), f, indent=2, default=str)
 
-    with open(f"{session_dir}/metadata_event.json", "w") as f:
+    with open(session_dir / "metadata_event.json", "w") as f:
         json.dump(dict(session.event), f, indent=2, default=str)
 
     print("Done.")
