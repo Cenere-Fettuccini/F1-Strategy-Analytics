@@ -2,9 +2,14 @@ from pathlib import Path
 import fastf1
 import pandas as pd
 import json
+import sys
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-BASE_PATH = BASE_DIR / "bronze"
+# Add project root to path so we can import config if running this as a script
+project_root = Path(__file__).resolve().parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.append(str(project_root))
+
+from config import BRONZE_DIR, FASTF1_CACHE_DIR
 
 def write_parquet(df, path):
     if df is None or df.empty:
@@ -17,7 +22,7 @@ def ingest_session(year, round_number, session_type):
     session = fastf1.get_session(year, round_number, session_type)
     session.load(laps=True, telemetry=True, weather=True, messages=True)
     
-    session_dir = BASE_PATH / f"{year}" / f"{round_number}" / f"{session_type}"
+    session_dir = BRONZE_DIR / f"{year}" / f"{round_number}" / f"{session_type}"
     session_dir.mkdir(parents=True, exist_ok=True)
 
     # core tables
@@ -72,7 +77,7 @@ def ingest_season(year):
 
 def build_warehouse(start_year=2018):
 
-    fastf1.Cache.enable_cache("ff1_cache")
+    fastf1.Cache.enable_cache(str(FASTF1_CACHE_DIR))
 
     current_year = pd.Timestamp.today().year
 
