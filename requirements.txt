@@ -14,7 +14,18 @@ cycler==0.12.1
 fastapi==0.135.1
 fastf1==3.8.1
 fonttools==4.61.1
+google-api-core==2.30.0
+google-auth==2.49.1
+google-cloud-bigquery==3.20.1
+google-cloud-core==2.5.0
+google-crc32c==1.8.0
+google-resumable-media==2.8.0
+googleapis-common-protos==1.73.0
+grpcio==1.78.0
+grpcio-status==1.78.0
 h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
 idna==3.11
 kiwisolver==1.4.9
 matplotlib==3.10.8
@@ -24,7 +35,12 @@ packaging==26.0
 pandas==2.3.3
 pillow==12.1.1
 platformdirs==4.9.4
+proto-plus==1.27.1
+protobuf==6.33.5
 py4j==0.10.9.9
+pyarrow==23.0.1
+pyasn1==0.6.2
+pyasn1_modules==0.4.2
 pycparser==3.0
 pydantic==2.12.5
 pydantic_core==2.41.5
@@ -49,4 +65,3 @@ url-normalize==2.2.1
 urllib3==2.6.3
 uvicorn==0.41.0
 websockets==16.0
-google-cloud-bigquery==3.20.1
