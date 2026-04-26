@@ -27,7 +27,8 @@ class CalendarFetcher:
                 # Filter out testing events
                 for _, event in schedule.iterrows():
                     event_name = event['EventName']
-                    if event_name == "Pre-Season Testing":
+                    # Filter out testing events using EventFormat instead of hardcoded strings
+                    if event.get('EventFormat') == 'testing':
                         continue
                     
                     # Each event has up to 5 sessions
@@ -41,7 +42,7 @@ class CalendarFetcher:
                             # Ensure the session has happened (start time + 2 hours buffer)
                             if pd.notna(session_date) and (session_date + pd.Timedelta(hours=2)) < now_utc:
                                 session_name = event[session_name_col]
-                                session_key = f"{year}_{event['RoundNumber']}_{session_name.replace(' ', '_')}"
+                                session_key = f"{year}/{event['RoundNumber']}/{session_name.replace(' ', '_')}"
                                 
                                 all_sessions.append({
                                     "year": year,

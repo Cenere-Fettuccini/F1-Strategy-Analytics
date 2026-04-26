@@ -1,2 +1,5 @@
 warehouse/ff1_cache
+warehouse/bronze
+warehouse/silver
+warehouse/gold
 /*.md

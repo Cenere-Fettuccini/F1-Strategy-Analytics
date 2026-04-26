@@ -1,0 +1,46 @@
+name: F1 Data Ingestion to HuggingFace
+
+on:
+  schedule:
+    # Runs every Monday at 06:00 UTC (giving the APIs time to update after Sunday races)
+    - cron: '0 6 * * 1'
+  workflow_dispatch: # Allows you to trigger it manually
+
+jobs:
+  ingest-and-upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install fastf1 requests pandas pyarrow huggingface_hub
+
+      - name: Authenticate with Hugging Face
+        run: huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+
+      - name: Prepare Bronze Directory
+        run: mkdir -p warehouse/bronze
+
+      - name: Download Existing Catalog from Hugging Face
+        # We try to download the catalog so the orchestrator knows what's already done.
+        # If the dataset is brand new and the catalog doesn't exist yet, we just ignore the error.
+        run: |
+          huggingface-cli download YOUR_HF_USERNAME/f1-bronze-data catalog.json --local-dir warehouse/bronze --repo-type dataset || echo "No existing catalog found. Starting fresh."
+
+      - name: Run Ingestion Orchestrator
+        run: |
+          python -m warehouse.ingestion.orchestrator
+
+      - name: Upload New Data to Hugging Face
+        # Syncs everything inside the warehouse/bronze folder directly to your HuggingFace dataset
+        run: |
+          huggingface-cli upload YOUR_HF_USERNAME/f1-bronze-data warehouse/bronze / --repo-type dataset

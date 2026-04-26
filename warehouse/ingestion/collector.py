@@ -55,9 +55,15 @@ class DataCollector:
         logger.info("Looking up OpenF1 session key for %s %s (%s)", year, session_name, country)
         # OpenF1 uses standard names like 'Race', 'Qualifying', 'Practice 1', etc.
         url = f"https://api.openf1.org/v1/sessions?year={year}&session_name={session_name}"
-        response = requests.get(url, timeout=15)
-        response.raise_for_status()
-        sessions = response.json()
+        try:
+            response = requests.get(url, timeout=15)
+            response.raise_for_status()
+            sessions = response.json()
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                logger.debug("OpenF1 returned 404 for %s %s. Data likely unavailable for this year.", year, session_name)
+                return None
+            raise
         
         # Try to match country
         for s in sessions:
@@ -91,11 +97,17 @@ class DataCollector:
             session_dir.mkdir(parents=True, exist_ok=True)
 
             # Save FastF1 data to Bronze layer (Parquet)
-            if hasattr(ff1_session, 'laps') and not ff1_session.laps.empty:
-                ff1_session.laps.to_parquet(session_dir / "laps.parquet")
+            try:
+                if not ff1_session.laps.empty:
+                    ff1_session.laps.to_parquet(session_dir / "laps.parquet")
+            except Exception as e:
+                logger.warning("Could not save laps data for %s: %s", session_key, e)
             
-            if hasattr(ff1_session, 'weather_data') and not ff1_session.weather_data.empty:
-                ff1_session.weather_data.to_parquet(session_dir / "weather.parquet")
+            try:
+                if not ff1_session.weather_data.empty:
+                    ff1_session.weather_data.to_parquet(session_dir / "weather.parquet")
+            except Exception as e:
+                logger.warning("Could not save weather data for %s: %s", session_key, e)
 
             # 2. Map and Fetch OpenF1 Data
             country = getattr(ff1_session.event, 'Country', '')
