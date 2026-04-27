@@ -97,17 +97,36 @@ class DataCollector:
             session_dir.mkdir(parents=True, exist_ok=True)
 
             # Save FastF1 data to Bronze layer (Parquet)
-            try:
-                if not ff1_session.laps.empty:
-                    ff1_session.laps.to_parquet(session_dir / "laps.parquet")
-            except Exception as e:
-                logger.warning("Could not save laps data for %s: %s", session_key, e)
+            if hasattr(ff1_session, 'laps') and not ff1_session.laps.empty:
+                ff1_session.laps.to_parquet(session_dir / "laps.parquet")
             
+            if hasattr(ff1_session, 'weather_data') and not ff1_session.weather_data.empty:
+                ff1_session.weather_data.to_parquet(session_dir / "weather.parquet")
+
+            # Extract Track Layout (Circuit Info)
             try:
-                if not ff1_session.weather_data.empty:
-                    ff1_session.weather_data.to_parquet(session_dir / "weather.parquet")
+                circuit_info = ff1_session.get_circuit_info()
+                if circuit_info and hasattr(circuit_info, 'corners') and not circuit_info.corners.empty:
+                    circuit_info.corners.to_parquet(session_dir / "track_corners.parquet")
             except Exception as e:
-                logger.warning("Could not save weather data for %s: %s", session_key, e)
+                logger.warning("Could not fetch circuit info for %s: %s", session_key, e)
+
+            # Extract full driver telemetry (X, Y coords for dashboard motion)
+            import pandas as pd
+            all_telemetry = []
+            for driver in ff1_session.drivers:
+                try:
+                    driver_laps = ff1_session.laps.pick_drivers(driver)
+                    if not driver_laps.empty:
+                        telemetry = driver_laps.get_telemetry()
+                        telemetry['Driver'] = driver
+                        all_telemetry.append(telemetry)
+                except Exception as e:
+                    logger.debug("Could not get telemetry for driver %s: %s", driver, e)
+            
+            if all_telemetry:
+                combined_telemetry = pd.concat(all_telemetry, ignore_index=True)
+                combined_telemetry.to_parquet(session_dir / "telemetry.parquet")
 
             # 2. Map and Fetch OpenF1 Data
             country = getattr(ff1_session.event, 'Country', '')
